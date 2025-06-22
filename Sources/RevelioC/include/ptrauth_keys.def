@@ -1,0 +1,30 @@
+// Revelio
+// Created by Dmitrii Galimzianov.
+// Copyright © 2025 Dmitrii Galimzianov. All rights reserved.
+
+#ifndef KEY
+#define KEY(k)
+#endif
+
+// KEY(none)
+KEY(asia)
+KEY(asib)
+KEY(asda)
+KEY(asdb)
+KEY(process_independent_code)
+KEY(process_dependent_code)
+KEY(process_independent_data)
+KEY(process_dependent_data)
+KEY(return_address)
+KEY(function_pointer)
+KEY(frame_pointer)
+KEY(block_function)
+KEY(cxx_vtable_pointer)
+KEY(method_list_pointer)
+KEY(objc_isa_pointer)
+KEY(objc_super_pointer)
+KEY(block_descriptor_pointer)
+KEY(objc_sel_pointer)
+KEY(objc_class_ro_pointer)
+
+#undef KEY

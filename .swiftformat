@@ -1,0 +1,7 @@
+--indent 2
+--maxwidth 100
+--nospaceoperators ...,..<
+--operatorfunc nospace
+--shortoptionals always
+--swiftversion 6.0
+--extensionacl on-declarations
