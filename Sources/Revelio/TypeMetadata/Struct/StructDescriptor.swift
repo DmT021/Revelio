@@ -34,6 +34,8 @@ public struct StructDescriptorPointer: StructDescriptor {
 
   public var name: String { base.name }
 
+  public var typeFlags: TypeContextDescriptorFlags { base.typeFlags }
+
   public var genericContext: TypeGenericContextDescriptorHeaderPointer? {
     guard flags.isGeneric else {
       return nil

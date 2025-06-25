@@ -4,6 +4,7 @@
 
 public protocol TypeContextDescriptor: ContextDescriptor {
   var name: String { get }
+  var typeFlags: TypeContextDescriptorFlags { get }
 }
 
 public struct TypeContextDescriptorPointer: TypeContextDescriptor {
@@ -34,6 +35,10 @@ public struct TypeContextDescriptorPointer: TypeContextDescriptor {
       return ""
     }
     return String(cString: namePtr)
+  }
+
+  public var typeFlags: TypeContextDescriptorFlags {
+    TypeContextDescriptorFlags(value: flags.kindSpecificFlags)
   }
 }
 

@@ -37,6 +37,16 @@ public struct GenericContextDescriptorHeaderPointer: GenericContextDescriptorHea
   public var flags: GenericContextDescriptorFlags {
     ptr.pointee.flags
   }
+
+  var extraSize: Int {
+    let parametersSize = alignedSize4(
+      elementSize: 1, // MemoryLayout<Parameter>.size
+      count: numParams
+    )
+    let genericRequirementDescriptorSize = 3 * 4
+    let requirementsSize = numRequirements * genericRequirementDescriptorSize
+    return parametersSize + requirementsSize
+  }
 }
 
 /// include/swift/ABI/GenericContext.h
@@ -98,4 +108,11 @@ struct _GenericContextDescriptorHeader {
   /// as they remains zero in code which must be compatible with
   /// older Swift runtimes.
   var flags: GenericContextDescriptorFlags
+}
+
+// Align by rounding up to the nearest multiple of 4
+private func alignedSize4(elementSize: Int, count: Int) -> Int {
+  // size = (size + alignment-1) & ~(alignment-1);
+  let totalSize = elementSize * count
+  return (totalSize + 3) & ~3
 }

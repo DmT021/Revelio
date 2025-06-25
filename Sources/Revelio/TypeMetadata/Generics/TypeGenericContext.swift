@@ -28,6 +28,10 @@ public struct TypeGenericContextDescriptorHeaderPointer: TypeGenericContextDescr
   public var numKeyArguments: Int { base.numKeyArguments }
 
   public var flags: GenericContextDescriptorFlags { base.flags }
+
+  var extraSize: Int { base.extraSize }
+
+  var totalSize: Int { MemoryLayout<Pointee>.size + extraSize }
 }
 
 /// include/swift/ABI/Metadata.h

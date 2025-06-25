@@ -5,3 +5,4 @@
 --shortoptionals always
 --swiftversion 6.0
 --extensionacl on-declarations
+--ifdef noindent

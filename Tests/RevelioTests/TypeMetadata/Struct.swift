@@ -13,7 +13,7 @@ struct StructMetadataTests {
     #expect(structMeta.descriptor.name == "SimpleStruct")
     #expect(structMeta.descriptor.numFields == 2)
     #expect(structMeta.descriptor.flags.isGeneric == false)
-    #expect(structMeta.genericParameters.isEmpty)
+    #expect(structMeta.genericArguments.isEmpty)
     #expect(structMeta.descriptor.genericContext == nil)
   }
 
@@ -24,7 +24,7 @@ struct StructMetadataTests {
     #expect(structMeta.descriptor.name == "GenericStruct")
     #expect(structMeta.descriptor.numFields == 2)
     #expect(structMeta.descriptor.flags.isGeneric)
-    #expect(structMeta.genericParameters.elementsEqual([Int.self, String.self], by: ==))
+    #expect(structMeta.genericArguments.elementsEqual([Int.self, String.self], by: ==))
     let genericContext = try #require(structMeta.descriptor.genericContext)
     #expect(genericContext.numParams == 2)
     #expect(genericContext.numRequirements == 1)
@@ -37,7 +37,7 @@ struct StructMetadataTests {
     #expect(structMeta.descriptor.name == "Int")
     #expect(structMeta.descriptor.numFields == 1)
     #expect(structMeta.descriptor.flags.isGeneric == false)
-    #expect(structMeta.genericParameters.isEmpty)
+    #expect(structMeta.genericArguments.isEmpty)
     #expect(structMeta.descriptor.genericContext == nil)
   }
 
@@ -48,7 +48,7 @@ struct StructMetadataTests {
     #expect(structMeta.descriptor.name == "Array")
     #expect(structMeta.descriptor.numFields == 1)
     #expect(structMeta.descriptor.flags.isGeneric == true)
-    #expect(structMeta.genericParameters.elementsEqual([Int.self], by: ==))
+    #expect(structMeta.genericArguments.elementsEqual([Int.self], by: ==))
     let genericContext = try #require(structMeta.descriptor.genericContext)
     #expect(genericContext.numParams == 1)
   }
@@ -58,6 +58,7 @@ extension TypeMetadata {
   fileprivate var asStruct: TypeMetadata.Struct? {
     switch self {
     case let .struct(meta): meta
+    default: nil
     }
   }
 }
