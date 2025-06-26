@@ -24,7 +24,12 @@ struct StructMetadataTests {
     #expect(structMeta.descriptor.name == "GenericStruct")
     #expect(structMeta.descriptor.numFields == 2)
     #expect(structMeta.descriptor.flags.isGeneric)
-    #expect(structMeta.genericArguments.elementsEqual([Int.self, String.self], by: ==))
+    #expect(structMeta.genericArguments
+      .elementsEqual(
+        [.type(Int.self), .type(String.self)],
+        by: isEqualGenericArguments
+      )
+    )
     let genericContext = try #require(structMeta.descriptor.genericContext)
     #expect(genericContext.numParams == 2)
     #expect(genericContext.numRequirements == 1)
@@ -48,7 +53,12 @@ struct StructMetadataTests {
     #expect(structMeta.descriptor.name == "Array")
     #expect(structMeta.descriptor.numFields == 1)
     #expect(structMeta.descriptor.flags.isGeneric == true)
-    #expect(structMeta.genericArguments.elementsEqual([Int.self], by: ==))
+    #expect(structMeta.genericArguments
+      .elementsEqual(
+        [.type(Int.self)],
+        by: isEqualGenericArguments
+      )
+    )
     let genericContext = try #require(structMeta.descriptor.genericContext)
     #expect(genericContext.numParams == 1)
   }
@@ -71,4 +81,22 @@ private struct SimpleStruct {
 private struct GenericStruct<T, U: CustomStringConvertible> {
   var foo: T
   var bar: U
+}
+
+func isEqualGenericArguments(lhs: GenericArgument?, rhs: GenericArgument?) -> Bool {
+  switch (lhs, rhs) {
+  case (.none, .none):
+    return true
+  case let (.some(lhs), .some(rhs)):
+    return isEqualGenericArguments(lhs: lhs, rhs: rhs)
+  case (.some, .none), (.none, .some):
+    return false
+  }
+}
+
+func isEqualGenericArguments(lhs: GenericArgument, rhs: GenericArgument) -> Bool {
+  switch (lhs, rhs) {
+  case let (.type(lhs), .type(rhs)):
+    return lhs == rhs
+  }
 }

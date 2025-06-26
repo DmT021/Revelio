@@ -14,16 +14,17 @@ extension TypeMetadata {
       StructDescriptorPointer(rawPtr: ptr.pointee.descriptor.stripped)
     }
 
-    public var genericArguments: [Any.Type] {
-      guard let genericContext = descriptor.genericContext else {
+    public var genericArguments: [GenericArgument?] {
+      guard
+        let genericParameterDescriptors = descriptor.genericParameterDescriptors
+      else {
         return []
       }
-      let numParams = genericContext.numParams
       let offsetInWords = MemoryLayout<_StructMetadata>.size / MemoryLayout<UnsafeRawPointer>.size
       return copyGenericArguments(
         metadataPtr: ptr,
         offsetInWords: offsetInWords,
-        numParams: numParams
+        params: genericParameterDescriptors
       )
     }
   }

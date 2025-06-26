@@ -68,7 +68,40 @@ struct ClassMetadataTests {
     #expect(genericContext.numRequirements == 1)
     #expect(genericContext.numKeyArguments == 3)
     let genericArguments = try #require(swiftSpecificClassMeta.genericArguments)
-    #expect(genericArguments.elementsEqual([Int.self, String.self], by: ==))
+    #expect(genericArguments
+      .elementsEqual(
+        [.type(Int.self), .type(String.self)],
+        by: isEqualGenericArguments
+      )
+    )
+  }
+
+  @Test
+  func classWithResilientSuperclass() throws {
+    let typeMeta = TypeMetadata(type: ClassWithResilientSuperclass<Int>.self)
+    let classMeta = try #require(typeMeta?.asClass)
+
+    let swiftSpecificClassMeta = try #require(classMeta.swift)
+    let flags = swiftSpecificClassMeta.flags
+    #expect(!flags.hasCustomObjCName)
+    #expect(!flags.isSwiftPreStableABI)
+    #expect(flags.usesSwiftRefcounting)
+
+    let descriptor = swiftSpecificClassMeta.descriptor
+    #expect(descriptor.name == "ClassWithResilientSuperclass")
+    #expect(descriptor.flags.isGeneric == true)
+
+    let genericContext = try #require(descriptor.genericContext)
+    #expect(genericContext.numParams == 1)
+    #expect(genericContext.numRequirements == 0)
+    #expect(genericContext.numKeyArguments == 1)
+    let genericArguments = try #require(swiftSpecificClassMeta.genericArguments)
+    #expect(genericArguments
+      .elementsEqual(
+        [.type(Int.self)],
+        by: isEqualGenericArguments
+      )
+    )
   }
 
   #if canImport(ObjectiveC)
@@ -81,6 +114,65 @@ struct ClassMetadataTests {
     #expect(classMeta.swift == nil)
   }
   #endif
+
+  @Test
+  func parameterPack() throws {
+    let typeMeta = TypeMetadata(type: ClassWithParameterPack<Int, String>.self)
+    let classMeta = try #require(typeMeta?.asClass)
+
+    let swiftSpecificClassMeta = try #require(classMeta.swift)
+    let flags = swiftSpecificClassMeta.flags
+    #expect(!flags.hasCustomObjCName)
+    #expect(!flags.isSwiftPreStableABI)
+    #expect(flags.usesSwiftRefcounting)
+
+    let descriptor = swiftSpecificClassMeta.descriptor
+    #expect(descriptor.name == "ClassWithParameterPack")
+    #expect(descriptor.numFields == 1)
+    #expect(descriptor.flags.isGeneric == true)
+
+    let genericContext = try #require(descriptor.genericContext)
+    #expect(genericContext.numParams == 1)
+    #expect(genericContext.numRequirements == 0)
+    #expect(genericContext.numKeyArguments == 2)
+
+    let genericArguments = try #require(swiftSpecificClassMeta.genericArguments)
+    #expect(genericArguments.elementsEqual(
+      [nil],
+      by: isEqualGenericArguments
+    ))
+  }
+
+  @Test
+  func classWithParameterPackAndResilientSuperclass() throws {
+    typealias TestType = ClassWithParameterPackAndResilientSuperclass<Int, String>
+    let type = TestType.self
+    let typeMeta = TypeMetadata(type: type)
+    let classMeta = try #require(typeMeta?.asClass)
+
+    let swiftSpecificClassMeta = try #require(classMeta.swift)
+    let flags = swiftSpecificClassMeta.flags
+    #expect(!flags.hasCustomObjCName)
+    #expect(!flags.isSwiftPreStableABI)
+    #expect(flags.usesSwiftRefcounting)
+
+    let descriptor = swiftSpecificClassMeta.descriptor
+    #expect(descriptor.name == "ClassWithParameterPackAndResilientSuperclass")
+    #expect(descriptor.numFields == 0)
+    #expect(descriptor.flags.isGeneric == true)
+
+    let genericContext = try #require(descriptor.genericContext)
+    #expect(genericContext.numParams == 1)
+    #expect(genericContext.numRequirements == 0)
+    #expect(genericContext.numKeyArguments == 2)
+
+    let genericArguments = try #require(swiftSpecificClassMeta.genericArguments)
+    #expect(genericArguments.elementsEqual(
+      [nil],
+      by: isEqualGenericArguments
+    ))
+
+  }
 }
 
 extension TypeMetadata {
@@ -116,4 +208,18 @@ private class GenericClass<T, U: CustomStringConvertible>: SimpleClass {
     self.buz = buz
     super.init(foo: foo)
   }
+}
+
+private class ClassWithResilientSuperclass<T>: ManagedBuffer<T, Void> {}
+
+private class ClassWithParameterPack<each T> {
+  var foo: (repeat each T)
+
+  init(foo: repeat each T) {
+    self.foo = (repeat each foo)
+  }
+}
+
+private class ClassWithParameterPackAndResilientSuperclass<each T>: ManagedBuffer<Void, Void> {
+  typealias Ts = (repeat each T)
 }

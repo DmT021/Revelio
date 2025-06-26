@@ -52,28 +52,16 @@ public struct ClassDescriptorPointer: ClassDescriptor {
     )
   }
 
-  public var resilientSuperclass: OpaquePointer? {
-    guard typeFlags.classHasResilientSuperclass else {
+  var genericParameterDescriptors: UnsafeBufferPointer<_GenericParamDescriptor>? {
+    // it's immediatelly after genericContext
+    guard let genericContext else {
       return nil
     }
-
-    var offset = 0
-
-    if let genericContext {
-      offset += genericContext.totalSize
-    }
-
-    let resilientSuperclassObjectPtr = (ptr.end.advanced(by: offset))
-      .assumingMemoryBound(to: _ResilientSuperclass.self)
-
-    return RelativeDirectPointer
-      .resolve(
-        from: resilientSuperclassObjectPtr,
-        keypath: \.superclass
-      )
-      .map {
-        OpaquePointer($0)
-      }
+    return UnsafeBufferPointer(
+      start: genericContext.ptr.end
+        .assumingMemoryBound(to: _GenericParamDescriptor.self),
+      count: genericContext.numParams
+    )
   }
 
   /// Return the offset of the start of generic arguments in the nominal
@@ -82,32 +70,32 @@ public struct ClassDescriptorPointer: ClassDescriptor {
     if typeFlags.classHasResilientSuperclass {
       var resilientImmediateMembersOffset: Int32? {
         // assert(description->hasResilientSuperclass());
-        let resilientMetadataBoundsPtr = ptr.pointee
+        let cachedResilientMetadataBoundsPtr = ptr.pointee
           .metadataNegativeSizeInWordsOrResilientMetadataBounds
           .resilientMetadataBounds
-          .pointer(from: ptr.pointer(to: \.metadataNegativeSizeInWordsOrResilientMetadataBounds)!)!
+          .pointer(from: ptr.pointer(to: \.metadataNegativeSizeInWordsOrResilientMetadataBounds)!)
 
         // try get the cached value
         if let immediateMembersOffset
-            = resilientMetadataBoundsPtr.pointee.tryGetImmediateMembersOffset() {
+            = cachedResilientMetadataBoundsPtr?.pointee.tryGetImmediateMembersOffset() {
           return Int32(immediateMembersOffset / MemoryLayout<UnsafeRawPointer>.size)
         }
 
-        guard
-          let bounds = metadataBounds
-        else {
-          assertionFailure("Can get metadata bounds")
-          return nil
-        }
-        return Int32(bounds.immediateMembersOffset / MemoryLayout<UnsafeRawPointer>.size)
+        // If there's no value in the cache the runtime will
+        // calculate it based on metadata bounds.
+        // Unfortunatelly if the class has a resilient superclass
+        // we would need to know it for the calculation.
+        // Even more unfortunatelly `TargetResilientSuperclass`
+        // is positioned after the objects of `TrailingGenericContextObjects`.
+        // Newer runtimes may add objects to `TrailingGenericContextObjects`.
+        // So the position of `TargetResilientSuperclass` can't be reliably
+        // calculated for future runtimes.
+        // So we rely solely on the cached immediateMembersOffset.
+        return nil
       }
       return resilientImmediateMembersOffset
     } else {
-      guard
-        let bounds = metadataBounds
-      else {
-        return nil
-      }
+      let bounds = nonResilientMetadataBounds
       return Int32(bounds.immediateMembersOffset / MemoryLayout<UnsafeRawPointer>.size)
     }
   }
@@ -127,194 +115,51 @@ public struct ClassDescriptorPointer: ClassDescriptor {
   }
 
   var metadataBounds: _ClassMetadataBounds? {
-    if let resilientSuperclass {
-      assert(typeFlags.classHasResilientSuperclass)
-      guard
-        let resilientSuperclassReferenceKind = typeFlags.classResilientSuperclassReferenceKind
-      else {
-        assertionFailure("Unknown classResilientSuperclassReferenceKind")
-        return nil
-      }
-
-      let resilientMetadataBoundsPtr = ptr.pointee
+    if typeFlags.classHasResilientSuperclass {
+      let cachedResilientMetadataBoundsPtr = ptr.pointee
         .metadataNegativeSizeInWordsOrResilientMetadataBounds
         .resilientMetadataBounds
-        .pointer(from: ptr.pointer(to: \.metadataNegativeSizeInWordsOrResilientMetadataBounds)!)!
+        .pointer(from: ptr.pointer(to: \.metadataNegativeSizeInWordsOrResilientMetadataBounds)!)
 
-      guard
-        let bounds = computeMetadataBoundsFromResilientSuperclass(
-          resilientSuperclass: resilientSuperclass,
-          refKind: resilientSuperclassReferenceKind,
-          areImmediateMembersNegative: typeFlags.classAreImmediateMembersNegative,
-          numImmediateMembers: ptr.pointee.numImmediateMembers,
-          storedBounds: resilientMetadataBoundsPtr
-        )
-      else {
-        assertionFailure("Can get metadata bounds")
-        return nil
-      }
-      return bounds
+      return cachedResilientMetadataBoundsPtr?.pointee.tryGet()
     } else {
-      /// Given that this class is known to not have a resilient superclass
-      /// return its metadata bounds.
-      let metadataNegativeSizeInWords = ptr.pointee
-        .metadataNegativeSizeInWordsOrResilientMetadataBounds
-        .metadataNegativeSizeInWords
-      let metadataPositiveSizeInWords = ptr.pointee
-        .metadataPositiveSizeInWordsOrExtraClassFlags
-        .metadataPositiveSizeInWords
-
-      /// Given that this class is known to not have a resilient superclass,
-      /// return the offset of its immediate members in words.
-      var nonResilientImmediateMembersOffset: Int32 {
-        // assert(!hasResilientSuperclass());
-        if typeFlags.classAreImmediateMembersNegative {
-          -Int32(metadataNegativeSizeInWords)
-        } else {
-          Int32(Int(metadataPositiveSizeInWords) - numImmediateMembers)
-        }
-      }
-      return _ClassMetadataBounds(
-        base: _MetadataBounds(
-          negativeSizeInWords: metadataNegativeSizeInWords,
-          positiveSizeInWords: metadataPositiveSizeInWords
-        ),
-        immediateMembersOffset: Int(nonResilientImmediateMembersOffset) *
-          MemoryLayout<UnsafeRawPointer>.size
-      )
+      return nonResilientMetadataBounds
     }
+  }
+
+  var nonResilientMetadataBounds: _ClassMetadataBounds {
+    assert(!typeFlags.classHasResilientSuperclass)
+    /// Given that this class is known to not have a resilient superclass
+    /// return its metadata bounds.
+    let metadataNegativeSizeInWords = ptr.pointee
+      .metadataNegativeSizeInWordsOrResilientMetadataBounds
+      .metadataNegativeSizeInWords
+    let metadataPositiveSizeInWords = ptr.pointee
+      .metadataPositiveSizeInWordsOrExtraClassFlags
+      .metadataPositiveSizeInWords
+
+    /// Given that this class is known to not have a resilient superclass,
+    /// return the offset of its immediate members in words.
+    var nonResilientImmediateMembersOffset: Int32 {
+      // assert(!hasResilientSuperclass());
+      if typeFlags.classAreImmediateMembersNegative {
+        -Int32(metadataNegativeSizeInWords)
+      } else {
+        Int32(Int(metadataPositiveSizeInWords) - numImmediateMembers)
+      }
+    }
+    return _ClassMetadataBounds(
+      base: _MetadataBounds(
+        negativeSizeInWords: metadataNegativeSizeInWords,
+        positiveSizeInWords: metadataPositiveSizeInWords
+      ),
+      immediateMembersOffset: Int(nonResilientImmediateMembersOffset) *
+        MemoryLayout<UnsafeRawPointer>.size
+    )
   }
 }
 
 extension ClassDescriptorPointer: Hashable {}
-
-// From stdlib/public/runtime/Metadata.cpp
-// static ClassMetadataBounds computeMetadataBoundsFromSuperclass(
-//                                      const ClassDescriptor *description,
-//                                      StoredClassMetadataBounds &storedBounds)
-private func computeMetadataBoundsFromResilientSuperclass(
-  resilientSuperclass superRef: OpaquePointer,
-  refKind: TypeReferenceKind,
-  areImmediateMembersNegative: Bool,
-  numImmediateMembers: UInt32,
-  storedBounds: UnsafePointer<_StoredClassMetadataBounds>
-) -> _ClassMetadataBounds? {
-  // Compute the bounds for the superclass, extending it to the minimum
-  // bounds of a Swift class.
-  guard
-    var bounds: _ClassMetadataBounds = computeMetadataBoundsForSuperclass(
-      resilientSuperclass: superRef,
-      refKind: refKind
-    )
-  else {
-    return nil
-  }
-  bounds.adjustForSubclass(
-    areImmediateMembersNegative: areImmediateMembersNegative,
-    numImmediateMembers: numImmediateMembers
-  )
-  return bounds
-}
-
-// static ClassMetadataBounds
-// computeMetadataBoundsForSuperclass(const void *ref,
-//                                   TypeReferenceKind refKind) {
-private func computeMetadataBoundsForSuperclass(
-  resilientSuperclass ref: OpaquePointer,
-  refKind: TypeReferenceKind,
-) -> _ClassMetadataBounds? {
-  switch refKind {
-  case .indirectTypeDescriptor:
-    typealias TypeDescriptorSignedPointer =
-      UnsafeRawSignedPointer<PtrAuthKeys.ProcessIndependentData>
-    guard
-      let ptr = UnsafePointer<TypeDescriptorSignedPointer?>(ref)
-        .pointee?
-        .stripped
-    else {
-      // swift::fatalError(0, "instantiating class metadata for class with "
-      //                     "missing weak-linked ancestor");
-      assertionFailure()
-      return nil
-    }
-    let descriptor = ClassDescriptorPointer(rawPtr: ptr)
-    return descriptor.metadataBounds
-
-  case .directTypeDescriptor:
-    let descriptor = ClassDescriptorPointer(rawPtr: UnsafeRawPointer(ref))
-    return descriptor.metadataBounds
-
-  case .directObjCClassName:
-    #if canImport(ObjectiveC)
-    let name = UnsafePointer<CChar>(ref)
-    guard
-      let cls = objc_lookUpClass(name)
-    else {
-      let name = String(validatingCString: name) ?? "can't get name"
-      assertionFailure("objc_lookUpClass failed for \"\(name)\"")
-      return nil
-    }
-    return computeMetadataBoundsForObjCClass(cls)
-    #else
-    break
-    #endif
-
-  case .indirectObjCClass:
-    #if canImport(ObjectiveC)
-    guard
-      let cls = UnsafePointer<AnyClass?>(ref).pointee
-    else {
-      assertionFailure()
-      return nil
-    }
-    return computeMetadataBoundsForObjCClass(cls)
-    #else
-    break
-    #endif
-  }
-}
-
-#if canImport(ObjectiveC)
-private func computeMetadataBoundsForObjCClass(_ cls: AnyClass) -> _ClassMetadataBounds? {
-  let cls: AnyClass = revelio_getInitializedObjCClass(cls)
-  return getClassBoundsAsSwiftSuperclass(cls: cls)
-}
-#endif
-
-/// Given that this class is serving as the superclass of a Swift class,
-/// return its bounds as metadata.
-///
-/// Note that the ImmediateMembersOffset member will not be meaningful.
-private func getClassBoundsAsSwiftSuperclass(
-  cls: AnyClass
-) -> _ClassMetadataBounds? {
-  guard
-    let classMetadata = switch TypeMetadata(type: cls) {
-    case let .class(meta): meta
-    case let .objcClassWrapper(meta): meta.class
-    default: nil
-    }
-  else {
-    assertionFailure("Unhandled metadata kind for AnyClass")
-    return nil
-  }
-  let rootBounds = _ClassMetadataBounds.forSwiftRootClass
-  if let swiftSpecific = classMetadata.swift {
-    var bounds = _ClassMetadataBounds.forAddressPointAndSize(
-      addressPoint: swiftSpecific.classAddressPoint,
-      totalSize: swiftSpecific.classSize
-    )
-    if bounds.base.negativeSizeInWords < rootBounds.base.negativeSizeInWords {
-      bounds.base.negativeSizeInWords = rootBounds.base.negativeSizeInWords
-    }
-    if bounds.base.positiveSizeInWords < rootBounds.base.positiveSizeInWords {
-      bounds.base.positiveSizeInWords = rootBounds.base.positiveSizeInWords
-    }
-    return bounds
-  } else {
-    return rootBounds
-  }
-}
 
 // include/swift/ABI/Metadata.h
 struct _ClassDescriptor {
@@ -413,6 +258,17 @@ struct _StoredClassMetadataBounds {
     }
     return value
   }
+
+  func tryGet() -> _ClassMetadataBounds? {
+    let offset = immediateMembersOffset
+    guard offset != 0 else {
+      return nil
+    }
+    return _ClassMetadataBounds(
+      base: bounds,
+      immediateMembersOffset: offset
+    )
+  }
 }
 
 struct _MetadataBounds {
@@ -433,55 +289,54 @@ struct _ClassMetadataBounds {
 
   /// Return the basic bounds of all Swift class metadata.
   /// The immediate members offset will not be meaningful.
-  fileprivate static var forSwiftRootClass: Self {
-    let headerSize = MemoryLayout<_HeapMetadataHeader>.size
-    let totalSize = headerSize + MemoryLayout<_ClassMetadata>.size
-    return forAddressPointAndSize(
-      addressPoint: headerSize,
-      totalSize: totalSize
-    )
-  }
+//  fileprivate static var forSwiftRootClass: Self {
+//    let headerSize = MemoryLayout<_HeapMetadataHeader>.size
+//    let totalSize = headerSize + MemoryLayout<_ClassMetadata>.size
+//    return forAddressPointAndSize(
+//      addressPoint: headerSize,
+//      totalSize: totalSize
+//    )
+//  }
 
   /// Return the bounds of a Swift class metadata with the given address
   /// point and size (both in bytes).
   /// The immediate members offset will not be meaningful.
-  fileprivate static func forAddressPointAndSize(
-    addressPoint: Int, // size_t
-    totalSize: Int // size_t
-  ) -> Self {
-    Self(
-      base: _MetadataBounds(
-        negativeSizeInWords: UInt32(addressPoint / MemoryLayout<UnsafeRawPointer>.size),
-        positiveSizeInWords: UInt32((totalSize - addressPoint) / MemoryLayout<UnsafeRawPointer>
-          .size)
-      ),
-      immediateMembersOffset: totalSize - addressPoint
-    )
-  }
+//  fileprivate static func forAddressPointAndSize(
+//    addressPoint: Int, // size_t
+//    totalSize: Int // size_t
+//  ) -> Self {
+//    Self(
+//      base: _MetadataBounds(
+//        negativeSizeInWords: UInt32(addressPoint / MemoryLayout<UnsafeRawPointer>.size),
+//        positiveSizeInWords: UInt32((totalSize - addressPoint) / MemoryLayout<UnsafeRawPointer>
+//          .size)
+//      ),
+//      immediateMembersOffset: totalSize - addressPoint
+//    )
+//  }
 
-  fileprivate mutating func adjustForSubclass(
-    areImmediateMembersNegative: Bool,
-    numImmediateMembers: UInt32
-  ) {
-    if areImmediateMembersNegative {
-      base.negativeSizeInWords += numImmediateMembers
-      immediateMembersOffset = -StoredPointerDifference(base.negativeSizeInWords) *
-        MemoryLayout<UnsafeRawPointer>.size
-    } else {
-      immediateMembersOffset = Int(base.positiveSizeInWords) * MemoryLayout<UnsafeRawPointer>.size
-      base.positiveSizeInWords += numImmediateMembers
-    }
-  }
+//  fileprivate mutating func adjustForSubclass(
+//    areImmediateMembersNegative: Bool,
+//    numImmediateMembers: UInt32
+//  ) {
+//    if areImmediateMembersNegative {
+//      base.negativeSizeInWords += numImmediateMembers
+//      immediateMembersOffset = -StoredPointerDifference(base.negativeSizeInWords) *
+//        MemoryLayout<UnsafeRawPointer>.size
+//    } else {
+//      immediateMembersOffset = Int(base.positiveSizeInWords) * MemoryLayout<UnsafeRawPointer>.size
+//      base.positiveSizeInWords += numImmediateMembers
+//    }
+//  }
 }
 
 // Trailing object for _ClassDescriptor
-struct _ResilientSuperclass {
-  var superclass: RelativeDirectPointer<Int32, Void>
-}
+//struct _ResilientSuperclass {
+//  var superclass: RelativeDirectPointer<Int32, Void>
+//}
 
 extension UnsafePointer {
-  /// Address next to the end of the current pointee
-  fileprivate var end: UnsafeRawPointer {
+  var end: UnsafeRawPointer {
     UnsafeRawPointer(self) + MemoryLayout<Pointee>.size
   }
 }

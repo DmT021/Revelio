@@ -5,20 +5,32 @@
 func copyGenericArguments(
   metadataPtr: UnsafeRawPointer,
   offsetInWords: Int,
-  numParams: Int
-) -> [Any.Type] {
-  Array(unsafeUninitializedCapacity: numParams) { buffer, initializedCount in
+  params: some Collection<_GenericParamDescriptor>
+) -> [GenericArgument?] {
+  let numParams = params.count
+  return Array(unsafeUninitializedCapacity: numParams) { buffer, initializedCount in
     initializedCount = numParams
     let genericArgumentsStart = metadataPtr
       .advanced(by: offsetInWords * MemoryLayout<UnsafeRawPointer>.size)
-    let genericArguments = UnsafeBufferPointer(
-      start: genericArgumentsStart.assumingMemoryBound(to: Any.Type.self),
-      count: numParams
-    )
-    for i in 0..<numParams {
+    for (i, param) in params.enumerated() {
+      let argument: GenericArgument?
+      switch param.kind {
+      case .none:
+        argument = nil
+      case .type:
+        argument = .type(
+          (genericArgumentsStart + i * MemoryLayout<UnsafeRawPointer>.size)
+            .assumingMemoryBound(to: Any.Type.self)
+            .pointee
+        )
+      case .typePack:
+        argument = nil
+      case .value:
+        argument = nil
+      }
       buffer.initializeElement(
         at: i,
-        to: genericArguments[i]
+        to: argument
       )
     }
   }

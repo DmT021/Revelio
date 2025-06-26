@@ -46,6 +46,18 @@ public struct StructDescriptorPointer: StructDescriptor {
     )
   }
 
+  var genericParameterDescriptors: UnsafeBufferPointer<_GenericParamDescriptor>? {
+    // it's immediatelly after genericContext
+    guard let genericContext else {
+      return nil
+    }
+    return UnsafeBufferPointer(
+      start: genericContext.ptr.end
+        .assumingMemoryBound(to: _GenericParamDescriptor.self),
+      count: genericContext.numParams
+    )
+  }
+
   // StructDescriptor
 
   public var numFields: Int {

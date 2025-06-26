@@ -41,11 +41,12 @@ extension TypeMetadata {
         )
       }
 
-      public var genericArguments: [Any.Type]? {
-        guard let genericContext = descriptor.genericContext else {
+      public var genericArguments: [GenericArgument?]? {
+        guard
+          let genericParameterDescriptors = descriptor.genericParameterDescriptors
+        else {
           return []
         }
-        let numParams = genericContext.numParams
         guard
           let genericArgumentOffset = descriptor.genericArgumentOffset
         else {
@@ -54,7 +55,7 @@ extension TypeMetadata {
         return copyGenericArguments(
           metadataPtr: ptr,
           offsetInWords: Int(genericArgumentOffset),
-          numParams: numParams
+          params: genericParameterDescriptors
         )
       }
     }
