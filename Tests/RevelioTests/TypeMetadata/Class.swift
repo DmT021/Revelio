@@ -11,7 +11,7 @@ import Testing
 struct ClassMetadataTests {
   @Test
   func simpleClass() throws {
-    let typeMeta = TypeMetadata(type: SimpleClass.self)
+    let typeMeta = Metadata(of: SimpleClass.self)
     let classMeta = try #require(typeMeta?.asClass)
 
     #if canImport(ObjectiveC)
@@ -41,7 +41,7 @@ struct ClassMetadataTests {
 
   @Test
   func genericClass() throws {
-    let typeMeta = TypeMetadata(type: GenericClass<Int, String>.self)
+    let typeMeta = Metadata(of: GenericClass<Int, String>.self)
     let classMeta = try #require(typeMeta?.asClass)
 
     let superclass = try #require(classMeta.superclass)
@@ -78,7 +78,7 @@ struct ClassMetadataTests {
 
   @Test
   func classWithResilientSuperclass() throws {
-    let typeMeta = TypeMetadata(type: ClassWithResilientSuperclass<Int>.self)
+    let typeMeta = Metadata(of: ClassWithResilientSuperclass<Int>.self)
     let classMeta = try #require(typeMeta?.asClass)
 
     let swiftSpecificClassMeta = try #require(classMeta.swift)
@@ -107,7 +107,7 @@ struct ClassMetadataTests {
   #if canImport(ObjectiveC)
   @Test
   func nsobject() throws {
-    let typeMeta = TypeMetadata(type: NSObject.self)
+    let typeMeta = Metadata(of: NSObject.self)
     let objcClassWrapperMeta = try #require(typeMeta?.asObjCClassWrapper)
     let classMeta = objcClassWrapperMeta.class
     #expect(classMeta.superclass == nil)
@@ -117,7 +117,7 @@ struct ClassMetadataTests {
 
   @Test
   func parameterPack() throws {
-    let typeMeta = TypeMetadata(type: ClassWithParameterPack<Int, String>.self)
+    let typeMeta = Metadata(of: ClassWithParameterPack<Int, String>.self)
     let classMeta = try #require(typeMeta?.asClass)
 
     let swiftSpecificClassMeta = try #require(classMeta.swift)
@@ -147,7 +147,7 @@ struct ClassMetadataTests {
   func classWithParameterPackAndResilientSuperclass() throws {
     typealias TestType = ClassWithParameterPackAndResilientSuperclass<Int, String>
     let type = TestType.self
-    let typeMeta = TypeMetadata(type: type)
+    let typeMeta = Metadata(of: type)
     let classMeta = try #require(typeMeta?.asClass)
 
     let swiftSpecificClassMeta = try #require(classMeta.swift)
@@ -175,15 +175,15 @@ struct ClassMetadataTests {
   }
 }
 
-extension TypeMetadata {
-  fileprivate var asClass: TypeMetadata.Class? {
+extension Metadata {
+  fileprivate var asClass: Metadata.Class? {
     switch self {
     case let .class(meta): meta
     default: nil
     }
   }
 
-  fileprivate var asObjCClassWrapper: TypeMetadata.ObjCClassWrapper? {
+  fileprivate var asObjCClassWrapper: Metadata.ObjCClassWrapper? {
     switch self {
     case let .objcClassWrapper(meta): meta
     default: nil

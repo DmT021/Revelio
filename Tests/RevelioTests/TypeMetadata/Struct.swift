@@ -8,7 +8,7 @@ import Testing
 struct StructMetadataTests {
   @Test
   func simpleStruct() throws {
-    let typeMeta = TypeMetadata(type: SimpleStruct.self)
+    let typeMeta = Metadata(of: SimpleStruct.self)
     let structMeta = try #require(typeMeta?.asStruct)
     #expect(structMeta.descriptor.name == "SimpleStruct")
     #expect(structMeta.descriptor.numFields == 2)
@@ -19,7 +19,7 @@ struct StructMetadataTests {
 
   @Test
   func genericStruct() throws {
-    let typeMeta = TypeMetadata(type: GenericStruct<Int, String>.self)
+    let typeMeta = Metadata(of: GenericStruct<Int, String>.self)
     let structMeta = try #require(typeMeta?.asStruct)
     #expect(structMeta.descriptor.name == "GenericStruct")
     #expect(structMeta.descriptor.numFields == 2)
@@ -37,7 +37,7 @@ struct StructMetadataTests {
 
   @Test
   func stdlibStruct() throws {
-    let typeMeta = TypeMetadata(type: Int.self)
+    let typeMeta = Metadata(of: Int.self)
     let structMeta = try #require(typeMeta?.asStruct)
     #expect(structMeta.descriptor.name == "Int")
     #expect(structMeta.descriptor.numFields == 1)
@@ -48,7 +48,7 @@ struct StructMetadataTests {
 
   @Test
   func stdlibGenericStruct() throws {
-    let typeMeta = TypeMetadata(type: [Int].self)
+    let typeMeta = Metadata(of: [Int].self)
     let structMeta = try #require(typeMeta?.asStruct)
     #expect(structMeta.descriptor.name == "Array")
     #expect(structMeta.descriptor.numFields == 1)
@@ -64,8 +64,8 @@ struct StructMetadataTests {
   }
 }
 
-extension TypeMetadata {
-  fileprivate var asStruct: TypeMetadata.Struct? {
+extension Metadata {
+  fileprivate var asStruct: Metadata.Struct? {
     switch self {
     case let .struct(meta): meta
     default: nil

@@ -1,25 +1,24 @@
 //
-//  TypeMetadata.swift
+//  Metadata.swift
 //  Revelio
 //
 // Created by Dmitrii Galimzianov.
 // Copyright © 2025 Dmitrii Galimzianov. All rights reserved.
 
-// TODO: rename to just Metadata
-public enum TypeMetadata {
+public enum Metadata {
   case `struct`(Struct)
   case `class`(Class)
   case objcClassWrapper(ObjCClassWrapper)
 
-  public init?(type: Any.Type) {
-    let kind = MetadataKind(type)
+  public init?(of: Any.Type) {
+    let kind = MetadataKind(of)
     switch kind {
     case .struct:
-      self = .struct(Struct(type: type))
+      self = .struct(Struct(type: of))
     case .class:
-      self = .class(Class(type: type))
+      self = .class(Class(type: of))
     case .objcClassWrapper:
-      self = .objcClassWrapper(ObjCClassWrapper(type: type))
+      self = .objcClassWrapper(ObjCClassWrapper(type: of))
     default:
       return nil
     }

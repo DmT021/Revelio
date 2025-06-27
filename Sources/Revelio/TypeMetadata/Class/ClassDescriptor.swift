@@ -2,10 +2,6 @@
 // Created by Dmitrii Galimzianov.
 // Copyright © 2025 Dmitrii Galimzianov. All rights reserved.
 
-#if canImport(ObjectiveC)
-import ObjectiveC
-#endif
-
 import RevelioC
 
 public protocol ClassDescriptor: TypeContextDescriptor {
@@ -286,54 +282,7 @@ struct _ClassMetadataBounds {
   /// members. In bytes
   typealias StoredPointerDifference = Int // ptrdiff_t
   var immediateMembersOffset: StoredPointerDifference
-
-  /// Return the basic bounds of all Swift class metadata.
-  /// The immediate members offset will not be meaningful.
-//  fileprivate static var forSwiftRootClass: Self {
-//    let headerSize = MemoryLayout<_HeapMetadataHeader>.size
-//    let totalSize = headerSize + MemoryLayout<_ClassMetadata>.size
-//    return forAddressPointAndSize(
-//      addressPoint: headerSize,
-//      totalSize: totalSize
-//    )
-//  }
-
-  /// Return the bounds of a Swift class metadata with the given address
-  /// point and size (both in bytes).
-  /// The immediate members offset will not be meaningful.
-//  fileprivate static func forAddressPointAndSize(
-//    addressPoint: Int, // size_t
-//    totalSize: Int // size_t
-//  ) -> Self {
-//    Self(
-//      base: _MetadataBounds(
-//        negativeSizeInWords: UInt32(addressPoint / MemoryLayout<UnsafeRawPointer>.size),
-//        positiveSizeInWords: UInt32((totalSize - addressPoint) / MemoryLayout<UnsafeRawPointer>
-//          .size)
-//      ),
-//      immediateMembersOffset: totalSize - addressPoint
-//    )
-//  }
-
-//  fileprivate mutating func adjustForSubclass(
-//    areImmediateMembersNegative: Bool,
-//    numImmediateMembers: UInt32
-//  ) {
-//    if areImmediateMembersNegative {
-//      base.negativeSizeInWords += numImmediateMembers
-//      immediateMembersOffset = -StoredPointerDifference(base.negativeSizeInWords) *
-//        MemoryLayout<UnsafeRawPointer>.size
-//    } else {
-//      immediateMembersOffset = Int(base.positiveSizeInWords) * MemoryLayout<UnsafeRawPointer>.size
-//      base.positiveSizeInWords += numImmediateMembers
-//    }
-//  }
 }
-
-// Trailing object for _ClassDescriptor
-//struct _ResilientSuperclass {
-//  var superclass: RelativeDirectPointer<Int32, Void>
-//}
 
 extension UnsafePointer {
   var end: UnsafeRawPointer {

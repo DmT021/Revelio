@@ -2,7 +2,7 @@
 // Created by Dmitrii Galimzianov.
 // Copyright © 2025 Dmitrii Galimzianov. All rights reserved.
 
-extension TypeMetadata {
+extension Metadata {
   public struct ObjCClassWrapper {
     typealias Pointee = _ObjCClassWrapperMetadata
 
@@ -12,7 +12,7 @@ extension TypeMetadata {
       ptr = unsafeBitCast(type, to: UnsafePointer<Pointee>.self)
     }
 
-    public var `class`: TypeMetadata.Class {
+    public var `class`: Metadata.Class {
       ptr.pointee.class
     }
   }
@@ -26,5 +26,5 @@ struct _ObjCClassWrapperMetadata {
 
 //  ConstTargetMetadataPointer<Runtime, TargetClassMetadataObjCInterop> Class;
   // This could be `Any.Type` but we know that it points to a class
-  var `class`: TypeMetadata.Class
+  var `class`: Metadata.Class
 }

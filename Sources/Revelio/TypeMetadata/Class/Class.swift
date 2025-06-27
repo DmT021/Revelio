@@ -2,7 +2,7 @@
 // Created by Dmitrii Galimzianov.
 // Copyright © 2025 Dmitrii Galimzianov. All rights reserved.
 
-extension TypeMetadata {
+extension Metadata {
   public struct Class {
     public struct SwiftSpecific {
       typealias Pointee = _SwiftClassMetadata
@@ -77,7 +77,7 @@ extension TypeMetadata {
     }
 
     // Ideally it should be a more strict type, but it can't be just
-    // `TypeMetadata.Class` because it probably can also be `ObjCClassWrapper`
+    // `Metadata.Class` because it probably can also be `ObjCClassWrapper`
     public var superclass: Any.Type? {
       guard
         let superclassPtr = ptr.pointee.anyClassMetadata.superclass?.stripped
@@ -163,7 +163,7 @@ struct _ClassMetadata {
 }
 
 struct _SwiftClassMetadata {
-  var _ClassMetadata: _ClassMetadata
+  var base: _ClassMetadata
 
   // The remaining fields are valid only when isTypeMetadata().
   // The Objective-C runtime knows the offsets to some of these fields.

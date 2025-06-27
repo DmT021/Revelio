@@ -2,7 +2,7 @@
 // Created by Dmitrii Galimzianov.
 // Copyright © 2025 Dmitrii Galimzianov. All rights reserved.
 
-extension TypeMetadata {
+extension Metadata {
   public struct Struct {
     var ptr: UnsafePointer<_StructMetadata>
 
