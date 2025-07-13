@@ -48,14 +48,14 @@ public struct ClassDescriptorPointer: ClassDescriptor {
     )
   }
 
-  var genericParameterDescriptors: UnsafeBufferPointer<_GenericParamDescriptor>? {
-    // it's immediatelly after genericContext
+  var genericParameterDescriptors: UnsafeBufferPointer<GenericParamDescriptor>? {
+    // it's immediately after genericContext
     guard let genericContext else {
       return nil
     }
     return UnsafeBufferPointer(
       start: genericContext.ptr.end
-        .assumingMemoryBound(to: _GenericParamDescriptor.self),
+        .assumingMemoryBound(to: GenericParamDescriptor.self),
       count: genericContext.numParams
     )
   }
@@ -73,7 +73,8 @@ public struct ClassDescriptorPointer: ClassDescriptor {
 
         // try get the cached value
         if let immediateMembersOffset
-            = cachedResilientMetadataBoundsPtr?.pointee.tryGetImmediateMembersOffset() {
+          = cachedResilientMetadataBoundsPtr?.pointee.tryGetImmediateMembersOffset()
+        {
           return Int32(immediateMembersOffset / MemoryLayout<UnsafeRawPointer>.size)
         }
 
@@ -282,10 +283,4 @@ struct _ClassMetadataBounds {
   /// members. In bytes
   typealias StoredPointerDifference = Int // ptrdiff_t
   var immediateMembersOffset: StoredPointerDifference
-}
-
-extension UnsafePointer {
-  var end: UnsafeRawPointer {
-    UnsafeRawPointer(self) + MemoryLayout<Pointee>.size
-  }
 }

@@ -23,9 +23,10 @@ public struct RelativeDirectPointer<Offset, Pointee>
     pointer(from: ptr)?.pointee
   }
 
-  public static func resolve<T>(from ptr: UnsafePointer<T>,
-                                keypath: KeyPath<T, Self>) -> UnsafePointer<Pointee>?
-  {
+  public static func resolve<T>(
+    from ptr: UnsafePointer<T>,
+    keypath: KeyPath<T, Self>
+  ) -> UnsafePointer<Pointee>? {
     guard let propertyAddress = ptr.pointer(to: keypath) else {
       return nil
     }

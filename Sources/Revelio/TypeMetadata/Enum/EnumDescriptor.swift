@@ -2,13 +2,10 @@
 // Created by Dmitrii Galimzianov.
 // Copyright © 2025 Dmitrii Galimzianov. All rights reserved.
 
-public protocol StructDescriptor: TypeContextDescriptor {
-  var numFields: Int { get }
-  var fieldOffsetVectorOffset: Int { get }
-}
+public protocol EnumDescriptor: TypeContextDescriptor {}
 
-public struct StructDescriptorPointer: StructDescriptor {
-  typealias Pointee = _StructDescriptor
+public struct EnumDescriptorPointer: EnumDescriptor {
+  typealias Pointee = _EnumDescriptor
 
   var ptr: UnsafePointer<Pointee>
 
@@ -76,26 +73,34 @@ public struct StructDescriptorPointer: StructDescriptor {
     )
   }
 
-  // StructDescriptor
+  // EnumDescriptor
 
-  public var numFields: Int {
-    Int(ptr.pointee.numFields)
+  public var numPayloadCases: Int {
+    Int(ptr.pointee.numPayloadCasesAndPayloadSizeOffset & 0x00FF_FFFF)
   }
 
-  public var fieldOffsetVectorOffset: Int {
-    Int(ptr.pointee.fieldOffsetVectorOffset)
+  var payloadSizeOffset: Int? {
+    let offset = (ptr.pointee.numPayloadCasesAndPayloadSizeOffset >> 24) & 0xFF
+    if offset == 0 {
+      return nil
+    }
+    return Int(offset)
+  }
+
+  public var numEmptyCases: Int {
+    Int(ptr.pointee.numEmptyCases)
   }
 }
 
-extension StructDescriptorPointer: Hashable {}
+extension EnumDescriptorPointer: Hashable {}
 
 /// include/swift/ABI/Metadata.h
 ///
 // template <typename Runtime>
-// class swift_ptrauth_struct_context_descriptor(StructDescriptor)
-//    TargetStructDescriptor final
+// class swift_ptrauth_struct_context_descriptor(EnumDescriptor)
+//    TargetEnumDescriptor final
 //    : public TargetValueTypeDescriptor<Runtime>,
-//      public TrailingGenericContextObjects<TargetStructDescriptor<Runtime>,
+//      public TrailingGenericContextObjects<TargetEnumDescriptor<Runtime>,
 //                            TargetTypeGenericContextDescriptorHeader,
 //                            /*additional trailing objects*/
 //                            TargetForeignMetadataInitialization<Runtime>,
@@ -105,15 +110,14 @@ extension StructDescriptorPointer: Hashable {}
 //                            TargetCanonicalSpecializedMetadatasCachingOnceToken<Runtime>,
 //                            InvertibleProtocolSet,
 //                            TargetSingletonMetadataPointer<Runtime>>
-struct _StructDescriptor {
+struct _EnumDescriptor {
   var base: _TypeContextDescriptor
 
-  /// The number of stored properties in the struct.
-  /// If there is a field offset vector, this is its length.
-  var numFields: UInt32
+  /// The number of non-empty cases in the enum are in the low 24 bits;
+  /// the offset of the payload size in the metadata record in words,
+  /// if any, is stored in the high 8 bits.
+  var numPayloadCasesAndPayloadSizeOffset: UInt32
 
-  /// The offset of the field offset vector for this struct's stored
-  /// properties in its metadata, if any. 0 means there is no field offset
-  /// vector.
-  var fieldOffsetVectorOffset: UInt32
+  /// The number of empty cases in the enum.
+  var numEmptyCases: UInt32
 }

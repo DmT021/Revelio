@@ -68,11 +68,12 @@ struct ClassMetadataTests {
     #expect(genericContext.numRequirements == 1)
     #expect(genericContext.numKeyArguments == 3)
     let genericArguments = try #require(swiftSpecificClassMeta.genericArguments)
-    #expect(genericArguments
-      .elementsEqual(
-        [.type(Int.self), .type(String.self)],
-        by: isEqualGenericArguments
-      )
+    #expect(
+      genericArguments
+        .elementsEqual(
+          [.type(Int.self), .type(String.self)],
+          by: isEqualGenericArguments
+        )
     )
   }
 
@@ -96,11 +97,12 @@ struct ClassMetadataTests {
     #expect(genericContext.numRequirements == 0)
     #expect(genericContext.numKeyArguments == 1)
     let genericArguments = try #require(swiftSpecificClassMeta.genericArguments)
-    #expect(genericArguments
-      .elementsEqual(
-        [.type(Int.self)],
-        by: isEqualGenericArguments
-      )
+    #expect(
+      genericArguments
+        .elementsEqual(
+          [.type(Int.self)],
+          by: isEqualGenericArguments
+        )
     )
   }
 
@@ -171,7 +173,6 @@ struct ClassMetadataTests {
       [nil],
       by: isEqualGenericArguments
     ))
-
   }
 }
 

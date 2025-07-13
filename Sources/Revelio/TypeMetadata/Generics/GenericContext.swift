@@ -109,10 +109,3 @@ struct _GenericContextDescriptorHeader {
   /// older Swift runtimes.
   var flags: GenericContextDescriptorFlags
 }
-
-// Align by rounding up to the nearest multiple of 4
-private func alignedSize4(elementSize: Int, count: Int) -> Int {
-  // size = (size + alignment-1) & ~(alignment-1);
-  let totalSize = elementSize * count
-  return (totalSize + 3) & ~3
-}

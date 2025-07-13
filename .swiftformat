@@ -6,3 +6,6 @@
 --swiftversion 6.0
 --extensionacl on-declarations
 --ifdef noindent
+--wraparguments before-first
+--wrapcollections before-first
+--wrapparameters before-first

@@ -26,14 +26,14 @@ public enum GenericParamKind {
   }
 }
 
-struct _GenericParamDescriptor {
+public struct GenericParamDescriptor {
   var value: UInt8
 
-  var kind: GenericParamKind? {
+  public var kind: GenericParamKind? {
     GenericParamKind(value: value & 0x3F)
   }
 
-  var hasKeyArgument: Bool {
+  public var hasKeyArgument: Bool {
     value & 0x80 != 0
   }
 }

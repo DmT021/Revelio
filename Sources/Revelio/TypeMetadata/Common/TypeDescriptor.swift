@@ -40,6 +40,11 @@ public struct TypeContextDescriptorPointer: TypeContextDescriptor {
   public var typeFlags: TypeContextDescriptorFlags {
     TypeContextDescriptorFlags(value: flags.kindSpecificFlags)
   }
+
+  public var fieldsDescriptor: FieldDescriptorPointer? {
+    let raw = RelativeDirectPointer.resolve(from: ptr, keypath: \.fields)
+    return raw.map { FieldDescriptorPointer(ptr: $0) }
+  }
 }
 
 extension TypeContextDescriptorPointer: Hashable {}
@@ -65,6 +70,5 @@ struct _TypeContextDescriptor {
   //                              /*Nullable*/ true> AccessFunctionPtr;
   var accessFunctionPtr: Int32 // TODO: add support
 
-  typealias _FieldDescriptor = Void // TODO: add support
   var fields: RelativeDirectPointer<Int32, _FieldDescriptor>
 }

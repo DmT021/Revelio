@@ -43,6 +43,8 @@ struct _StructMetadata {
   // #define __ptrauth_swift_type_descriptor \
   //  __ptrauth(ptrauth_key_process_independent_data, 1, \
   //            SpecialPointerAuthDiscriminators::TypeDescriptor)
-  var descriptor: UnsafeRawSignedPointer<PtrAuthKeys
-    .ProcessIndependentData>
+  var descriptor: UnsafeRawSignedPointer<
+    PtrAuthKeys
+      .ProcessIndependentData
+  >
 }

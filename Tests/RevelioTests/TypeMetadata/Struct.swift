@@ -2,7 +2,7 @@
 // Created by Dmitrii Galimzianov.
 // Copyright © 2025 Dmitrii Galimzianov. All rights reserved.
 
-import Revelio
+@testable import Revelio
 import Testing
 
 struct StructMetadataTests {
@@ -15,6 +15,25 @@ struct StructMetadataTests {
     #expect(structMeta.descriptor.flags.isGeneric == false)
     #expect(structMeta.genericArguments.isEmpty)
     #expect(structMeta.descriptor.genericContext == nil)
+
+    let fieldsDescriptor = try #require(structMeta.descriptor.fieldsDescriptor)
+    #expect(fieldsDescriptor.mangledTypeName != nil)
+    #expect(fieldsDescriptor.superclass == nil)
+    #expect(fieldsDescriptor.kind == .struct)
+    #expect(fieldsDescriptor.numFields == 2)
+    let fields = fieldsDescriptor.fields
+    let field0 = fields[0]
+    #expect(field0.flags.isVar)
+    #expect(!field0.flags.isIndirectCase)
+    #expect(!field0.flags.isArtificial)
+    #expect(field0.name == "foo")
+    #expect(field0.mangledType == "Si")
+    let field1 = fields[1]
+    #expect(!field1.flags.isVar)
+    #expect(!field1.flags.isIndirectCase)
+    #expect(!field1.flags.isArtificial)
+    #expect(field1.name == "bar")
+    #expect(field1.mangledType == "SS")
   }
 
   @Test
@@ -24,15 +43,21 @@ struct StructMetadataTests {
     #expect(structMeta.descriptor.name == "GenericStruct")
     #expect(structMeta.descriptor.numFields == 2)
     #expect(structMeta.descriptor.flags.isGeneric)
-    #expect(structMeta.genericArguments
-      .elementsEqual(
-        [.type(Int.self), .type(String.self)],
-        by: isEqualGenericArguments
-      )
+    #expect(
+      structMeta.genericArguments
+        .elementsEqual(
+          [.type(Int.self), .type(String.self)],
+          by: isEqualGenericArguments
+        )
     )
     let genericContext = try #require(structMeta.descriptor.genericContext)
     #expect(genericContext.numParams == 2)
     #expect(genericContext.numRequirements == 1)
+
+    let gr = try #require(structMeta.descriptor.genericRequirementDescriptors)
+    #expect(gr.count == 1)
+    #expect(gr[0].flags.kind == .protocol)
+    #expect(!gr[0].payloadUnion.protocol.isObjC)
   }
 
   @Test
@@ -53,11 +78,12 @@ struct StructMetadataTests {
     #expect(structMeta.descriptor.name == "Array")
     #expect(structMeta.descriptor.numFields == 1)
     #expect(structMeta.descriptor.flags.isGeneric == true)
-    #expect(structMeta.genericArguments
-      .elementsEqual(
-        [.type(Int.self)],
-        by: isEqualGenericArguments
-      )
+    #expect(
+      structMeta.genericArguments
+        .elementsEqual(
+          [.type(Int.self)],
+          by: isEqualGenericArguments
+        )
     )
     let genericContext = try #require(structMeta.descriptor.genericContext)
     #expect(genericContext.numParams == 1)
@@ -75,7 +101,7 @@ extension Metadata {
 
 private struct SimpleStruct {
   var foo: Int
-  var bar: String
+  let bar: String
 }
 
 private struct GenericStruct<T, U: CustomStringConvertible> {
@@ -86,17 +112,17 @@ private struct GenericStruct<T, U: CustomStringConvertible> {
 func isEqualGenericArguments(lhs: GenericArgument?, rhs: GenericArgument?) -> Bool {
   switch (lhs, rhs) {
   case (.none, .none):
-    return true
+    true
   case let (.some(lhs), .some(rhs)):
-    return isEqualGenericArguments(lhs: lhs, rhs: rhs)
+    isEqualGenericArguments(lhs: lhs, rhs: rhs)
   case (.some, .none), (.none, .some):
-    return false
+    false
   }
 }
 
 func isEqualGenericArguments(lhs: GenericArgument, rhs: GenericArgument) -> Bool {
   switch (lhs, rhs) {
   case let (.type(lhs), .type(rhs)):
-    return lhs == rhs
+    lhs == rhs
   }
 }
